@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graf Interactiv - Constructor Manual</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-content {
+            flex: 1;
+            position: relative;
+        }
+
+        h1 {
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 24px;
+            text-align: center;
+            font-weight: 300;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 8px 25px rgba(229, 62, 62, 0.3);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            width: auto;
+            margin: 0 5px 0 0;
+        }
+
+        #graph {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        }
+
+        .node {
+            stroke: #fff;
+            stroke-width: 3px;
+            cursor: pointer;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+            transition: all 0.3s ease;
+        }
+
+        .node:hover {
+            stroke-width: 4px;
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.3));
+        }
+
+        .link {
+            stroke: rgba(255, 255, 255, 0.8);
+            stroke-width: 2px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+            transition: all 0.3s ease;
+        }
+
+        .link-saturated {
+            stroke: #ff6b6b;
+            stroke-width: 4px;
+            filter: drop-shadow(0 3px 6px rgba(255, 107, 107, 0.4));
+        }
+
+        .link-unsaturated {
+            stroke: #4ecdc4;
+            stroke-width: 3px;
+            filter: drop-shadow(0 2px 4px rgba(78, 205, 196, 0.3));
+        }
+
+        .node-label {
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: central;
+            pointer-events: none;
+            fill: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .node-sublabel {
+            font-size: 12px;
+            font-weight: normal;
+            text-anchor: middle;
+            dominant-baseline: text-before-edge;
+            pointer-events: none;
+            fill: rgba(255, 255, 255, 0.9);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .link-label {
+            font-size: 11px;
+            text-anchor: middle;
+            pointer-events: none;
+            fill: white;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .node-list, .link-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f7fafc;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item-text {
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-input {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        @keyframes nodeAppear {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .node-new {
+            animation: nodeAppear 0.5s ease-out;
+        }
+
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .drawing-canvas.active {
+            pointer-events: all;
+        }
+
+        .drawing-tool {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .tool-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .tool-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tool-btn:hover:not(.active) {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.2);
+        }
+
+        .color-swatch.active {
+            border-color: #333;
+            transform: scale(1.1);
+        }
+
+        .brush-size {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .brush-size input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>🌐 Graf Builder</h1>
+            
+            <div class="section drawing-tool">
+                <h3>🎨 Tool de Desenat</h3>
+                <div class="tool-buttons">
+                    <button class="tool-btn" id="moveBtn" onclick="setDrawingMode('move')">✋ Mișcă</button>
+                    <button class="tool-btn" id="drawBtn" onclick="setDrawingMode('draw')">✏️ Desenează</button>
+                    <button class="tool-btn" id="eraseBtn" onclick="setDrawingMode('erase')">🧽 Șterge</button>
+                    <button class="tool-btn" onclick="clearDrawing()">🗑️ Curăță</button>
+                </div>
+                <div class="color-palette">
+                    <div class="color-swatch active" style="background: #ff6b6b" onclick="setDrawColor('#ff6b6b')"></div>
+                    <div class="color-swatch" style="background: #4ecdc4" onclick="setDrawColor('#4ecdc4')"></div>
+                    <div class="color-swatch" style="background: #45b7d1" onclick="setDrawColor('#45b7d1')"></div>
+                    <div class="color-swatch" style="background: #96ceb4" onclick="setDrawColor('#96ceb4')"></div>
+                    <div class="color-swatch" style="background: #ffeaa7" onclick="setDrawColor('#ffeaa7')"></div>
+                    <div class="color-swatch" style="background: #dda0dd" onclick="setDrawColor('#dda0dd')"></div>
+                    <div class="color-swatch" style="background: #98d8c8" onclick="setDrawColor('#98d8c8')"></div>
+                    <div class="color-swatch" style="background: #ffffff" onclick="setDrawColor('#ffffff')"></div>
+                </div>
+                <div class="brush-size">
+                    <label style="font-size: 12px;">Mărime:</label>
+                    <input type="range" id="brushSize" min="2" max="20" value="4" onchange="setBrushSize(this.value)">
+                    <span id="brushSizeValue">4px</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>⚡ Analiza Fluxului</h3>
+                <button class="btn" onclick="analyzeSaturation()" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);">
+                    🔍 Analizează Saturarea
+                </button>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
+                        <div style="width: 20px; height: 3px; background: #ff6b6b;"></div>
+                        <span>Legătură saturată</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 3px; background: #4ecdc4;"></div>
+                        <span>Legătură nesaturată</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>➕ Adaugă Nod</h3>
+                <div class="form-group">
+                    <label>ID Nod:</label>
+                    <input type="text" id="nodeId" placeholder="ex: A, B, x1, etc.">
+                </div>
+                <div class="form-group">
+                    <label>Etichetă:</label>
+                    <input type="text" id="nodeLabel" placeholder="ex: Nod A, Start, etc.">
+                </div>
+                <div class="form-group">
+                    <label>Sub-etichetă (sub nod):</label>
+                    <input type="text" id="nodeSublabel" placeholder="ex: (info), [detalii], etc.">
+                </div>
+                <div class="form-group">
+                    <label>Culoare:</label>
+                    <input type="color" id="nodeColor" value="#667eea" class="color-input">
+                </div>
+                <button class="btn" onclick="addNode()">Adaugă Nod</button>
+            </div>
+
+            <div class="section">
+                <h3>🔗 Adaugă Legătură</h3>
+                <div class="form-group">
+                    <label>De la:</label>
+                    <select id="sourceSelect">
+                        <option value="">Selectează nodul sursă</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>La:</label>
+                    <select id="targetSelect">
+                        <option value="">Selectează nodul țintă</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Etichetă legătură:</label>
+                    <input type="text" id="linkLabel" placeholder="ex: 10, conectare, etc.">
+                </div>
+                <button class="btn" onclick="addLink()">Adaugă Legătură</button>
+            </div>
+
+            <div class="section">
+                <h3>📋 Noduri Existente</h3>
+                <div class="node-list" id="nodeList">
+                    <p style="text-align: center; color: #a0aec0; font-style: italic;">Nu există noduri încă</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🔗 Legături Existente</h3>
+                <div class="link-list" id="linkList">
+                    <p style="text-align: center; color: #a0aec0; font-style: italic;">Nu există legături încă</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <button class="btn btn-danger" onclick="clearAll()">🗑️ Șterge Tot</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="controls">
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 12px; color: #4a5568;">Forța simulării:</label>
+                    <input type="range" id="forceStrength" min="100" max="1000" value="400" 
+                           oninput="updateForce(this.value)" style="width: 100px;">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-small" onclick="resetZoom()" style="background: #48bb78;">Reset Zoom</button>
+                    <button class="btn btn-small" onclick="fitToScreen()" style="background: #ed8936;">Fit Screen</button>
+                </div>
+            </div>
+            <canvas class="drawing-canvas" id="drawingCanvas"></canvas>
+            <div id="graph"></div>
+        </div>
+    </div>
+
+    <script>
+        let nodes = [];
+        let links = [];
+        let simulation;
+        let svg, node, link, linkText, nodeLabels, nodeSublabels;
+        let zoom;
+
+        // Drawing variables
+        let drawingCanvas, drawingCtx;
+        let isDrawing = false;
+        let drawingMode = 'none'; // 'draw', 'erase', 'none'
+        let drawColor = '#ff6b6b';
+        let brushSize = 4;
+
+        // Culori predefinite pentru noduri
+        const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'];
+        let colorIndex = 0;
+
+        // Inițializare SVG
+        function initializeSVG() {
+            const width = document.getElementById('graph').clientWidth;
+            const height = document.getElementById('graph').clientHeight;
+
+            svg = d3.select("#graph")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            // Inițializare canvas pentru desenat
+            initializeDrawingCanvas();
+
+            // Adaugă grup principal pentru zoom
+            const mainGroup = svg.append("g")
+                .attr("class", "main-group");
+
+            // Configurare zoom
+            zoom = d3.zoom()
+                .scaleExtent([0.5, 3])
+                .on("zoom", (event) => {
+                    mainGroup.attr("transform", event.transform);
+                });
+
+            svg.call(zoom);
+
+            // Adaugă marker pentru săgeți în grupul principal
+            svg.append("defs").append("marker")
+                .attr("id", "arrowhead")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 25)
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("fill", "rgba(255, 255, 255, 0.8)");
+
+            // Inițializare simulare
+            simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(120))
+                .force("charge", d3.forceManyBody().strength(-400))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(35));
+
+            updateGraph();
+        }
+
+        function updateGraph() {
+            const mainGroup = svg.select(".main-group");
+            
+            // Update links
+            const linkGroup = mainGroup.selectAll(".link-group")
+                .data(links, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
+
+            const linkEnter = linkGroup.enter()
+                .append("g")
+                .attr("class", "link-group");
+
+            linkEnter.append("line")
+                .attr("class", "link")
+                .attr("marker-end", "url(#arrowhead)");
+
+            linkEnter.append("text")
+                .attr("class", "link-label");
+
+            linkGroup.exit().remove();
+
+            link = mainGroup.selectAll(".link");
+            linkText = mainGroup.selectAll(".link-label");
+
+            linkText.text(d => d.label || "");
+
+            // Update nodes
+            const nodeGroup = mainGroup.selectAll(".node-group")
+                .data(nodes, d => d.id);
+
+            const nodeEnter = nodeGroup.enter()
+                .append("g")
+                .attr("class", "node-group")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+            nodeEnter.append("circle")
+                .attr("class", "node node-new")
+                .attr("r", 25)
+                .attr("fill", d => d.color || colors[colorIndex++ % colors.length]);
+
+            nodeEnter.append("text")
+                .attr("class", "node-label");
+
+            nodeEnter.append("text")
+                .attr("class", "node-sublabel");
+
+            nodeGroup.exit().remove();
+
+            node = mainGroup.selectAll(".node");
+            nodeLabels = mainGroup.selectAll(".node-label");
+            nodeSublabels = mainGroup.selectAll(".node-sublabel");
+
+            nodeLabels.text(d => d.label);
+            nodeSublabels.text(d => d.sublabel || "");
+
+            // Restart simulation
+            simulation.nodes(nodes);
+            simulation.force("link").links(links);
+            simulation.alpha(1).restart();
+
+            // Update tick function
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                linkText
+                    .attr("x", d => (d.source.x + d.target.x) / 2)
+                    .attr("y", d => (d.source.y + d.target.y) / 2 - 5);
+
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+
+                nodeLabels
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y);
+
+                nodeSublabels
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y + 35); // Sub nod, la 35px distanță
+            });
+        }
+
+        // Drawing Canvas Functions
+        function initializeDrawingCanvas() {
+            drawingCanvas = document.getElementById('drawingCanvas');
+            drawingCtx = drawingCanvas.getContext('2d');
+            
+            const rect = document.getElementById('graph').getBoundingClientRect();
+            drawingCanvas.width = rect.width;
+            drawingCanvas.height = rect.height;
+            
+            // Drawing event listeners
+            drawingCanvas.addEventListener('mousedown', startDrawing);
+            drawingCanvas.addEventListener('mousemove', draw);
+            drawingCanvas.addEventListener('mouseup', stopDrawing);
+            drawingCanvas.addEventListener('mouseout', stopDrawing);
+        }
+
+        function setDrawingMode(mode) {
+            drawingMode = mode;
+            const canvas = document.getElementById('drawingCanvas');
+            
+            // Reset all buttons
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'draw') {
+                document.getElementById('drawBtn').classList.add('active');
+                canvas.classList.add('active');
+                canvas.style.cursor = 'crosshair';
+            } else if (mode === 'erase') {
+                document.getElementById('eraseBtn').classList.add('active');
+                canvas.classList.add('active');
+                canvas.style.cursor = 'grab';
+            } else {
+                canvas.classList.remove('active');
+                canvas.style.cursor = 'default';
+            }
+        }
+
+        function setDrawColor(color) {
+            drawColor = color;
+            document.querySelectorAll('.color-swatch').forEach(swatch => swatch.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function setBrushSize(size) {
+            brushSize = size;
+            document.getElementById('brushSizeValue').textContent = size + 'px';
+        }
+
+        function startDrawing(e) {
+            if (drawingMode === 'none') return;
+            
+            isDrawing = true;
+            const rect = drawingCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(x, y);
+            
+            if (drawingMode === 'draw') {
+                drawingCtx.globalCompositeOperation = 'source-over';
+                drawingCtx.strokeStyle = drawColor;
+                drawingCtx.lineWidth = brushSize;
+            } else if (drawingMode === 'erase') {
+                drawingCtx.globalCompositeOperation = 'destination-out';
+                drawingCtx.lineWidth = brushSize * 2;
+            }
+            
+            drawingCtx.lineCap = 'round';
+        }
+
+        function draw(e) {
+            if (!isDrawing || drawingMode === 'none') return;
+            
+            const rect = drawingCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            drawingCtx.lineTo(x, y);
+            drawingCtx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function clearDrawing() {
+            drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        }
+
+        // Saturation Analysis Functions
+        function analyzeSaturation() {
+            const mainGroup = svg.select(".main-group");
+            
+            links.forEach(linkData => {
+                const linkElement = mainGroup.selectAll(".link")
+                    .filter(d => d === linkData);
+                
+                if (linkData.label && linkData.label.includes('=')) {
+                    const parts = linkData.label.split('=');
+                    if (parts.length >= 2) {
+                        const leftSide = parseFloat(parts[0].trim());
+                        const rightSide = parts[1].trim();
+                        
+                        // Check if right side contains mathematical expressions
+                        let calculatedSum = 0;
+                        const numbers = rightSide.match(/\d+(\.\d+)?/g);
+                        
+                        if (numbers) {
+                            calculatedSum = numbers.reduce((sum, num) => sum + parseFloat(num), 0);
+                        }
+                        
+                        // Determine saturation
+                        if (Math.abs(leftSide - calculatedSum) < 0.01) {
+                            // Saturated - perfect match
+                            linkElement.classed('link-saturated', true)
+                                     .classed('link-unsaturated', false);
+                        } else {
+                            // Unsaturated - numbers don't match
+                            linkElement.classed('link-unsaturated', true)
+                                     .classed('link-saturated', false);
+                        }
+                    }
+                } else {
+                    // Reset to default if no equation
+                    linkElement.classed('link-saturated', false)
+                             .classed('link-unsaturated', false);
+                }
+            });
+        }
+
+        function addNode() {
+            const id = document.getElementById('nodeId').value.trim();
+            const label = document.getElementById('nodeLabel').value.trim();
+            const sublabel = document.getElementById('nodeSublabel').value.trim();
+            const color = document.getElementById('nodeColor').value;
+
+            if (!id) {
+                alert('Te rog introdu un ID pentru nod!');
+                return;
+            }
+
+            if (nodes.find(n => n.id === id)) {
+                alert('Un nod cu acest ID există deja!');
+                return;
+            }
+
+            nodes.push({
+                id: id,
+                label: label || id,
+                sublabel: sublabel,
+                color: color
+            });
+
+            updateGraph();
+            updateSelectOptions();
+            updateNodeList();
+            
+            // Clear inputs
+            document.getElementById('nodeId').value = '';
+            document.getElementById('nodeLabel').value = '';
+            document.getElementById('nodeSublabel').value = '';
+        }
+
+        function addLink() {
+            const source = document.getElementById('sourceSelect').value;
+            const target = document.getElementById('targetSelect').value;
+            const label = document.getElementById('linkLabel').value.trim();
+
+            if (!source || !target) {
+                alert('Te rog selectează atât nodul sursă cât și nodul țintă!');
+                return;
+            }
+
+            if (source === target) {
+                alert('Nu poți conecta un nod cu el însuși!');
+                return;
+            }
+
+            if (links.find(l => (l.source.id || l.source) === source && (l.target.id || l.target) === target)) {
+                alert('Această legătură există deja!');
+                return;
+            }
+
+            links.push({
+                source: source,
+                target: target,
+                label: label
+            });
+
+            updateGraph();
+            updateLinkList();
+            
+            // Clear inputs
+            document.getElementById('sourceSelect').value = '';
+            document.getElementById('targetSelect').value = '';
+            document.getElementById('linkLabel').value = '';
+        }
+
+        function updateSelectOptions() {
+            const sourceSelect = document.getElementById('sourceSelect');
+            const targetSelect = document.getElementById('targetSelect');
+            
+            const currentSource = sourceSelect.value;
+            const currentTarget = targetSelect.value;
+            
+            sourceSelect.innerHTML = '<option value="">Selectează nodul sursă</option>';
+            targetSelect.innerHTML = '<option value="">Selectează nodul țintă</option>';
+            
+            nodes.forEach(node => {
+                sourceSelect.innerHTML += `<option value="${node.id}" ${currentSource === node.id ? 'selected' : ''}>${node.label}</option>`;
+                targetSelect.innerHTML += `<option value="${node.id}" ${currentTarget === node.id ? 'selected' : ''}>${node.label}</option>`;
+            });
+        }
+
+        function updateNodeList() {
+            const nodeList = document.getElementById('nodeList');
+            
+            if (nodes.length === 0) {
+                nodeList.innerHTML = '<p style="text-align: center; color: #a0aec0; font-style: italic;">Nu există noduri încă</p>';
+                return;
+            }
+            
+            nodeList.innerHTML = nodes.map(node => `
+                <div class="list-item">
+                    <span class="list-item-text">
+                        <span style="color: ${node.color};">●</span> ${node.label} (${node.id})
+                        ${node.sublabel ? `<br><small style="color: #718096;">↳ ${node.sublabel}</small>` : ''}
+                    </span>
+                    <button class="btn btn-danger btn-small" onclick="removeNode('${node.id}')">Șterge</button>
+                </div>
+            `).join('');
+        }
+
+        function updateLinkList() {
+            const linkList = document.getElementById('linkList');
+            
+            if (links.length === 0) {
+                linkList.innerHTML = '<p style="text-align: center; color: #a0aec0; font-style: italic;">Nu există legături încă</p>';
+                return;
+            }
+            
+            linkList.innerHTML = links.map((link, index) => `
+                <div class="list-item">
+                    <span class="list-item-text">
+                        ${link.source.id || link.source} → ${link.target.id || link.target}
+                        ${link.label ? `(${link.label})` : ''}
+                    </span>
+                    <button class="btn btn-danger btn-small" onclick="removeLink(${index})">Șterge</button>
+                </div>
+            `).join('');
+        }
+
+        function removeNode(nodeId) {
+            nodes = nodes.filter(n => n.id !== nodeId);
+            links = links.filter(l => 
+                (l.source.id || l.source) !== nodeId && 
+                (l.target.id || l.target) !== nodeId
+            );
+            
+            updateGraph();
+            updateSelectOptions();
+            updateNodeList();
+            updateLinkList();
+        }
+
+        function removeLink(index) {
+            links.splice(index, 1);
+            updateGraph();
+            updateLinkList();
+        }
+
+        function clearAll() {
+            if (confirm('Ești sigur că vrei să ștergi toate nodurile și legăturile?')) {
+                nodes = [];
+                links = [];
+                updateGraph();
+                updateSelectOptions();
+                updateNodeList();
+                updateLinkList();
+            }
+        }
+
+        function updateForce(value) {
+            simulation.force("charge").strength(-value);
+            simulation.alpha(0.3).restart();
+        }
+
+        function resetZoom() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+        }
+
+        function fitToScreen() {
+            if (nodes.length === 0) return;
+            
+            const bounds = {
+                minX: d3.min(nodes, d => d.x) - 50,
+                maxX: d3.max(nodes, d => d.x) + 50,
+                minY: d3.min(nodes, d => d.y) - 50,
+                maxY: d3.max(nodes, d => d.y) + 50
+            };
+            
+            const width = document.getElementById('graph').clientWidth;
+            const height = document.getElementById('graph').clientHeight;
+            
+            const scale = Math.min(
+                width / (bounds.maxX - bounds.minX),
+                height / (bounds.maxY - bounds.minY)
+            ) * 0.9;
+            
+            const centerX = (bounds.minX + bounds.maxX) / 2;
+            const centerY = (bounds.minY + bounds.maxY) / 2;
+            
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+                    .translate(width / 2, height / 2)
+                    .scale(scale)
+                    .translate(-centerX, -centerY)
+            );
+        }
+
+        // Drag functions
+        function dragstarted(event) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            event.subject.fx = event.subject.x;
+            event.subject.fy = event.subject.y;
+        }
+
+        function dragged(event) {
+            event.subject.fx = event.x;
+            event.subject.fy = event.y;
+        }
+
+        function dragended(event) {
+            if (!event.active) simulation.alphaTarget(0);
+            event.subject.fx = null;
+            event.subject.fy = null;
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initializeSVG();
+            
+            // Add some example nodes to get started
+            nodes = [
+                { id: "Start", label: "Start", color: "#667eea" },
+                { id: "A", label: "Nod A", color: "#764ba2" }
+            ];
+            
+            updateGraph();
+            updateSelectOptions();
+            updateNodeList();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const width = document.getElementById('graph').clientWidth;
+            const height = document.getElementById('graph').clientHeight;
+            
+            svg.attr("width", width).attr("height", height);
+            simulation.force("center", d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.3).restart();
+            
+            // Resize drawing canvas
+            if (drawingCanvas) {
+                drawingCanvas.width = width;
+                drawingCanvas.height = height;
+            }
+        });
+    </script>
+</body>
+</html>
